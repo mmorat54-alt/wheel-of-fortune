@@ -99,75 +99,16 @@
     min-height: 20px;
   }
 
-  /* Modal */
-  #modalOverlay {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.55);
-    z-index: 100;
-    justify-content: center;
-    align-items: center;
-  }
-  #modalOverlay.show { display: flex; }
-  .modal-box {
-    background: #fff;
-    border-radius: 18px;
-    padding: 30px 26px;
-    text-align: center;
-    max-width: 320px;
-    animation: pop 0.35s ease;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.4);
-  }
-  .modal-box .emoji { font-size: 46px; }
-  .modal-box h3 {
-    color: #1e1b4b;
-    margin: 10px 0 4px;
-    font-size: 20px;
-  }
-  .modal-box .code-line {
-    display: inline-block;
-    margin-top: 12px;
-    background: #f3f0ff;
-    color: #7c3aed;
+  #resultBox {
+    margin-top: 16px;
+    min-height: 24px;
+    font-size: 17px;
     font-weight: bold;
-    font-size: 22px;
-    letter-spacing: 2px;
-    padding: 8px 18px;
-    border-radius: 10px;
-    border: 2px dashed #7c3aed;
-  }
-  .modal-box button {
-    display: block;
-    margin: 20px auto 0;
-    background: #7c3aed;
     color: #fff;
-    border: none;
-    padding: 10px 26px;
-    border-radius: 24px;
-    font-size: 15px;
-    cursor: pointer;
   }
-  @keyframes pop {
-    0% { transform: scale(0.7); opacity: 0; }
-    100% { transform: scale(1); opacity: 1; }
-  }
-
-  /* Confetti */
-  .confetti-piece {
-    position: fixed;
-    top: -20px;
-    width: 8px;
-    height: 14px;
-    z-index: 99;
-    opacity: 0.9;
-    pointer-events: none;
-  }
-  @keyframes fall {
-    to {
-      transform: translateY(110vh) rotate(720deg);
-      opacity: 0.3;
-    }
+  #resultBox .code {
+    color: #facc15;
+    letter-spacing: 1px;
   }
 </style>
 </head>
@@ -186,10 +127,7 @@
   </div>
   <button id="spinBtn">بچرخون</button>
   <div id="statusMsg"></div>
-</div>
-
-<div id="modalOverlay">
-  <div class="modal-box" id="modalContent"></div>
+  <div id="resultBox"></div>
 </div>
 
 <!-- ===== Firebase (برای ثبت یک‌بار مصرف بودن هر کاربر) ===== -->
@@ -269,41 +207,13 @@ function validPhone(phone) {
   return /^09\d{9}$/.test(phone);
 }
 
-function launchConfetti() {
-  const colors = ["#facc15", "#7c3aed", "#a78bfa", "#f472b6", "#34d399"];
-  for (let i = 0; i < 60; i++) {
-    const piece = document.createElement('div');
-    piece.className = 'confetti-piece';
-    piece.style.left = Math.random() * 100 + 'vw';
-    piece.style.background = colors[Math.floor(Math.random() * colors.length)];
-    piece.style.animation = `fall ${2 + Math.random() * 2}s linear forwards`;
-    piece.style.animationDelay = (Math.random() * 0.4) + 's';
-    document.body.appendChild(piece);
-    setTimeout(() => piece.remove(), 4500);
-  }
-}
-
-function showModal(prize) {
-  const modal = document.getElementById('modalContent');
+function announceResult(prize) {
+  const box = document.getElementById('resultBox');
   if (prize.code) {
-    modal.innerHTML = `
-      <div class="emoji">🎉</div>
-      <h3>تبریک! ${prize.label}</h3>
-      <div class="code-line">${prize.code}</div>
-      <button onclick="closeModal()">باشه</button>
-    `;
-    launchConfetti();
+    box.innerHTML = `تبریک! برنده‌ی ${prize.label} شدید — کد شما: <span class="code">${prize.code}</span>`;
   } else {
-    modal.innerHTML = `
-      <div class="emoji">😅</div>
-      <h3>این دفعه شانس نبود</h3>
-      <button onclick="closeModal()">باشه</button>
-    `;
+    box.textContent = 'این دفعه شانس نبود، موفق باشید!';
   }
-  document.getElementById('modalOverlay').classList.add('show');
-}
-function closeModal() {
-  document.getElementById('modalOverlay').classList.remove('show');
 }
 
 document.getElementById('spinBtn').addEventListener('click', async function() {
@@ -363,7 +273,7 @@ document.getElementById('spinBtn').addEventListener('click', async function() {
       }
 
       spinning = false;
-      showModal(prize);
+      announceResult(prize);
     }, 5300);
 
   } catch (err) {
@@ -378,6 +288,3 @@ document.getElementById('spinBtn').addEventListener('click', async function() {
 
 </body>
 </html>
-
-
-  
