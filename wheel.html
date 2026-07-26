@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<title>گردونه شانس</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: Tahoma, Arial, sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    margin: 0;
+    background: linear-gradient(135deg, #1e1b4b, #7c3aed);
+  }
+  .wheel-container {
+    text-align: center;
+    padding: 30px 20px;
+  }
+  .wheel-container h2 {
+    color: #fff;
+    margin-bottom: 20px;
+    font-size: 22px;
+  }
+  .wheel-wrapper {
+    position: relative;
+    width: 300px;
+    height: 300px;
+    margin: 0 auto;
+  }
+  #wheelCanvas {
+    border-radius: 50%;
+    box-shadow: 0 0 0 8px #fff, 0 10px 30px rgba(0,0,0,0.4);
+    transition: transform 5s cubic-bezier(0.17, 0.67, 0.12, 0.99);
+  }
+  .pointer {
+    position: absolute;
+    top: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 15px solid transparent;
+    border-right: 15px solid transparent;
+    border-top: 28px solid #facc15;
+    z-index: 10;
+    filter: drop-shadow(0 2px 3px rgba(0,0,0,0.4));
+  }
+  #spinBtn {
+    margin-top: 25px;
+    padding: 14px 40px;
+    font-size: 18px;
+    font-weight: bold;
+    background: #facc15;
+    color: #1e1b4b;
+    border: none;
+    border-radius: 30px;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    transition: transform 0.15s;
+  }
+  #spinBtn:hover { transform: scale(1.05); }
+  #spinBtn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+  }
+  #result {
+    margin-top: 20px;
+    min-height: 60px;
+  }
+  #result .prize-box {
+    display: inline-block;
+    background: #fff;
+    padding: 14px 24px;
+    border-radius: 12px;
+    font-size: 18px;
+    font-weight: bold;
+    color: #1e1b4b;
+    animation: pop 0.3s ease;
+  }
+  #result .code {
+    display: block;
+    margin-top: 6px;
+    font-size: 22px;
+    letter-spacing: 2px;
+    color: #7c3aed;
+  }
+  @keyframes pop {
+    0% { transform: scale(0.7); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+</style>
+</head>
+<body>
+
+<div class="wheel-container">
+  <h2>🎉 بچرخون و کد تخفیفتو بگیر! 🎉</h2>
+  <div class="wheel-wrapper">
+    <div class="pointer"></div>
+    <canvas id="wheelCanvas" width="300" height="300"></canvas>
+  </div>
+  <button id="spinBtn">بچرخون</button>
+  <div id="result"></div>
+</div>
+
+<script>
+// ---- تنظیمات جوایز: می‌تونید متن و کد تخفیف هر بخش رو تغییر بدید ----
+const prizes = [
+  { label: "۵٪ تخفیف",  code: "SPIN5",  color: "#7c3aed" },
+  { label: "بدون شانس", code: null,     color: "#4c1d95" },
+  { label: "۱۰٪ تخفیف", code: "SPIN10", color: "#a78bfa" },
+  { label: "ارسال رایگان", code: "FREESHIP", color: "#6d28d9" },
+  { label: "۱۵٪ تخفیف", code: "SPIN15", color: "#8b5cf6" },
+  { label: "بدون شانس", code: null,     color: "#5b21b6" },
+  { label: "۲۰٪ تخفیف", code: "SPIN20", color: "#9333ea" },
+  { label: "۲۵ تومان کد هدیه", code: "GIFT25", color: "#6b21a8" }
+];
+
+const canvas = document.getElementById('wheelCanvas');
+const ctx = canvas.getContext('2d');
+const numSegments = prizes.length;
+const segmentAngle = (2 * Math.PI) / numSegments;
+const radius = 150;
+let currentRotation = 0;
+let spinning = false;
+
+function drawWheel() {
+  ctx.clearRect(0, 0, 300, 300);
+  for (let i = 0; i < numSegments; i++) {
+    const startAngle = i * segmentAngle;
+    const endAngle = startAngle + segmentAngle;
+
+    ctx.beginPath();
+    ctx.moveTo(radius, radius);
+    ctx.arc(radius, radius, radius, startAngle, endAngle);
+    ctx.closePath();
+    ctx.fillStyle = prizes[i].color;
+    ctx.fill();
+
+    // متن
+    ctx.save();
+    ctx.translate(radius, radius);
+    ctx.rotate(startAngle + segmentAngle / 2);
+    ctx.textAlign = "right";
+    ctx.fillStyle = "#fff";
+    ctx.font = "bold 13px Tahoma";
+    ctx.fillText(prizes[i].label, radius - 15, 5);
+    ctx.restore();
+  }
+}
+drawWheel();
+
+document.getElementById('spinBtn').addEventListener('click', function() {
+  if (spinning) return;
+  spinning = true;
+  this.disabled = true;
+  document.getElementById('result').innerHTML = "";
+
+  // انتخاب تصادفی جایزه
+  const winningIndex = Math.floor(Math.random() * numSegments);
+
+  // زاویه‌ی مورد نیاز برای رسیدن به وسط سگمنت برنده، زیر پوینتر (بالای گردونه)
+  const targetSegmentMiddle = winningIndex * segmentAngle + segmentAngle / 2;
+  const fullSpins = 5 * 2 * Math.PI; // ۵ دور کامل برای جلوه بصری
+  // پوینتر بالای گردونه است (معادل زاویه -90 درجه یا 270 درجه)
+  const pointerAngle = -Math.PI / 2;
+  const finalRotation = fullSpins + (pointerAngle - targetSegmentMiddle);
+
+  currentRotation += finalRotation;
+  canvas.style.transform = `rotate(${currentRotation}rad)`;
+
+  setTimeout(() => {
+    spinning = false;
+    document.getElementById('spinBtn').disabled = false;
+    const prize = prizes[winningIndex];
+    const resultDiv = document.getElementById('result');
+    if (prize.code) {
+      resultDiv.innerHTML = `<div class="prize-box">تبریک! 🎁 ${prize.label}
+        <span class="code">${prize.code}</span></div>`;
+    } else {
+      resultDiv.innerHTML = `<div class="prize-box">😅 این دفعه شانس نبود، دوباره امتحان کن!</div>`;
+    }
+  }, 5100);
+});
+</script>
+
+</body>
+</html>
