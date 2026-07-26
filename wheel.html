@@ -13,15 +13,30 @@
     min-height: 100vh;
     margin: 0;
     background: linear-gradient(135deg, #1e1b4b, #7c3aed);
+    overflow: hidden;
   }
   .wheel-container {
     text-align: center;
     padding: 30px 20px;
+    position: relative;
+    z-index: 2;
   }
   .wheel-container h2 {
     color: #fff;
-    margin-bottom: 20px;
-    font-size: 22px;
+    margin-bottom: 18px;
+    font-size: 21px;
+  }
+  .phone-box {
+    margin-bottom: 15px;
+  }
+  .phone-box input {
+    padding: 10px 14px;
+    border-radius: 20px;
+    border: none;
+    font-size: 15px;
+    text-align: center;
+    width: 200px;
+    direction: ltr;
   }
   .wheel-wrapper {
     position: relative;
@@ -32,25 +47,36 @@
   #wheelCanvas {
     border-radius: 50%;
     box-shadow: 0 0 0 8px #fff, 0 10px 30px rgba(0,0,0,0.4);
-    transition: transform 5s cubic-bezier(0.17, 0.67, 0.12, 0.99);
+    transition: transform 5s cubic-bezier(0.15, 0.65, 0.1, 1);
   }
   .pointer {
     position: absolute;
-    top: -10px;
+    top: -12px;
     left: 50%;
     transform: translateX(-50%);
     width: 0;
     height: 0;
-    border-left: 15px solid transparent;
-    border-right: 15px solid transparent;
-    border-top: 28px solid #facc15;
+    border-left: 14px solid transparent;
+    border-right: 14px solid transparent;
+    border-top: 26px solid #facc15;
     z-index: 10;
-    filter: drop-shadow(0 2px 3px rgba(0,0,0,0.4));
+    filter: drop-shadow(0 2px 3px rgba(0,0,0,0.5));
+  }
+  .pointer::after {
+    content: "";
+    position: absolute;
+    top: -30px;
+    left: -6px;
+    width: 12px;
+    height: 12px;
+    background: #facc15;
+    border-radius: 50%;
+    border: 2px solid #fff;
   }
   #spinBtn {
-    margin-top: 25px;
-    padding: 14px 40px;
-    font-size: 18px;
+    margin-top: 22px;
+    padding: 13px 38px;
+    font-size: 17px;
     font-weight: bold;
     background: #facc15;
     color: #1e1b4b;
@@ -60,36 +86,88 @@
     box-shadow: 0 4px 12px rgba(0,0,0,0.3);
     transition: transform 0.15s;
   }
-  #spinBtn:hover { transform: scale(1.05); }
+  #spinBtn:hover:not(:disabled) { transform: scale(1.05); }
   #spinBtn:disabled {
-    opacity: 0.6;
+    opacity: 0.5;
     cursor: not-allowed;
     transform: none;
   }
-  #result {
-    margin-top: 20px;
-    min-height: 60px;
+  #statusMsg {
+    margin-top: 14px;
+    color: #fde68a;
+    font-size: 14px;
+    min-height: 20px;
   }
-  #result .prize-box {
-    display: inline-block;
+
+  /* Modal */
+  #modalOverlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.55);
+    z-index: 100;
+    justify-content: center;
+    align-items: center;
+  }
+  #modalOverlay.show { display: flex; }
+  .modal-box {
     background: #fff;
-    padding: 14px 24px;
-    border-radius: 12px;
-    font-size: 18px;
-    font-weight: bold;
-    color: #1e1b4b;
-    animation: pop 0.3s ease;
+    border-radius: 18px;
+    padding: 30px 26px;
+    text-align: center;
+    max-width: 320px;
+    animation: pop 0.35s ease;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.4);
   }
-  #result .code {
-    display: block;
-    margin-top: 6px;
+  .modal-box .emoji { font-size: 46px; }
+  .modal-box h3 {
+    color: #1e1b4b;
+    margin: 10px 0 4px;
+    font-size: 20px;
+  }
+  .modal-box .code-line {
+    display: inline-block;
+    margin-top: 12px;
+    background: #f3f0ff;
+    color: #7c3aed;
+    font-weight: bold;
     font-size: 22px;
     letter-spacing: 2px;
-    color: #7c3aed;
+    padding: 8px 18px;
+    border-radius: 10px;
+    border: 2px dashed #7c3aed;
+  }
+  .modal-box button {
+    display: block;
+    margin: 20px auto 0;
+    background: #7c3aed;
+    color: #fff;
+    border: none;
+    padding: 10px 26px;
+    border-radius: 24px;
+    font-size: 15px;
+    cursor: pointer;
   }
   @keyframes pop {
     0% { transform: scale(0.7); opacity: 0; }
     100% { transform: scale(1); opacity: 1; }
+  }
+
+  /* Confetti */
+  .confetti-piece {
+    position: fixed;
+    top: -20px;
+    width: 8px;
+    height: 14px;
+    z-index: 99;
+    opacity: 0.9;
+    pointer-events: none;
+  }
+  @keyframes fall {
+    to {
+      transform: translateY(110vh) rotate(720deg);
+      opacity: 0.3;
+    }
   }
 </style>
 </head>
@@ -97,16 +175,42 @@
 
 <div class="wheel-container">
   <h2>🎉 بچرخون و کد تخفیفتو بگیر! 🎉</h2>
+
+  <div class="phone-box">
+    <input type="tel" id="phoneInput" placeholder="شماره موبایل خود را وارد کنید" maxlength="11">
+  </div>
+
   <div class="wheel-wrapper">
     <div class="pointer"></div>
     <canvas id="wheelCanvas" width="300" height="300"></canvas>
   </div>
   <button id="spinBtn">بچرخون</button>
-  <div id="result"></div>
+  <div id="statusMsg"></div>
 </div>
 
+<div id="modalOverlay">
+  <div class="modal-box" id="modalContent"></div>
+</div>
+
+<!-- ===== Firebase (برای ثبت یک‌بار مصرف بودن هر کاربر) ===== -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
-// ---- تنظیمات جوایز: می‌تونید متن و کد تخفیف هر بخش رو تغییر بدید ----
+// ⚠️ این بخش رو با اطلاعات پروژه فایربیس خودتون جایگزین کنید (مراحلش رو در چت توضیح می‌دم)
+const firebaseConfig = {
+  apiKey: "AIzaSyDFE2GEtwGmC62BU0nmpcD6dgeP6eo81Sk",
+  authDomain: "wheel-project-339a8.firebaseapp.com",
+  projectId: "wheel-project-339a8",
+  storageBucket: "wheel-project-339a8.firebasestorage.app",
+  messagingSenderId: "628356281697",
+  appId: "1:628356281697:web:f8ad85ec5e032efccc8120"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+</script>
+
+<script>
+// ---- تنظیمات جوایز ----
 const prizes = [
   { label: "۵٪ تخفیف",  code: "SPIN5",  color: "#7c3aed" },
   { label: "بدون شانس", code: null,     color: "#4c1d95" },
@@ -139,6 +243,11 @@ function drawWheel() {
     ctx.fillStyle = prizes[i].color;
     ctx.fill();
 
+    // خط جداکننده سفید بین قسمت‌ها (برای شفافیت لبه‌ها)
+    ctx.strokeStyle = "rgba(255,255,255,0.8)";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
     // متن
     ctx.save();
     ctx.translate(radius, radius);
@@ -152,39 +261,123 @@ function drawWheel() {
 }
 drawWheel();
 
-document.getElementById('spinBtn').addEventListener('click', function() {
+function showStatus(msg) {
+  document.getElementById('statusMsg').textContent = msg;
+}
+
+function validPhone(phone) {
+  return /^09\d{9}$/.test(phone);
+}
+
+function launchConfetti() {
+  const colors = ["#facc15", "#7c3aed", "#a78bfa", "#f472b6", "#34d399"];
+  for (let i = 0; i < 60; i++) {
+    const piece = document.createElement('div');
+    piece.className = 'confetti-piece';
+    piece.style.left = Math.random() * 100 + 'vw';
+    piece.style.background = colors[Math.floor(Math.random() * colors.length)];
+    piece.style.animation = `fall ${2 + Math.random() * 2}s linear forwards`;
+    piece.style.animationDelay = (Math.random() * 0.4) + 's';
+    document.body.appendChild(piece);
+    setTimeout(() => piece.remove(), 4500);
+  }
+}
+
+function showModal(prize) {
+  const modal = document.getElementById('modalContent');
+  if (prize.code) {
+    modal.innerHTML = `
+      <div class="emoji">🎉</div>
+      <h3>تبریک! ${prize.label}</h3>
+      <div class="code-line">${prize.code}</div>
+      <button onclick="closeModal()">باشه</button>
+    `;
+    launchConfetti();
+  } else {
+    modal.innerHTML = `
+      <div class="emoji">😅</div>
+      <h3>این دفعه شانس نبود</h3>
+      <button onclick="closeModal()">باشه</button>
+    `;
+  }
+  document.getElementById('modalOverlay').classList.add('show');
+}
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('show');
+}
+
+document.getElementById('spinBtn').addEventListener('click', async function() {
   if (spinning) return;
+  const phone = document.getElementById('phoneInput').value.trim();
+
+  if (!validPhone(phone)) {
+    showStatus('لطفاً شماره موبایل معتبر وارد کنید (مثال: 09123456789)');
+    return;
+  }
+
   spinning = true;
   this.disabled = true;
-  document.getElementById('result').innerHTML = "";
+  document.getElementById('phoneInput').disabled = true;
+  showStatus('در حال بررسی...');
 
-  // انتخاب تصادفی جایزه
-  const winningIndex = Math.floor(Math.random() * numSegments);
+  try {
+    const docRef = db.collection('spins').doc(phone);
+    const docSnap = await docRef.get();
 
-  // زاویه‌ی مورد نیاز برای رسیدن به وسط سگمنت برنده، زیر پوینتر (بالای گردونه)
-  const targetSegmentMiddle = winningIndex * segmentAngle + segmentAngle / 2;
-  const fullSpins = 5 * 2 * Math.PI; // ۵ دور کامل برای جلوه بصری
-  // پوینتر بالای گردونه است (معادل زاویه -90 درجه یا 270 درجه)
-  const pointerAngle = -Math.PI / 2;
-  const finalRotation = fullSpins + (pointerAngle - targetSegmentMiddle);
-
-  currentRotation += finalRotation;
-  canvas.style.transform = `rotate(${currentRotation}rad)`;
-
-  setTimeout(() => {
-    spinning = false;
-    document.getElementById('spinBtn').disabled = false;
-    const prize = prizes[winningIndex];
-    const resultDiv = document.getElementById('result');
-    if (prize.code) {
-      resultDiv.innerHTML = `<div class="prize-box">تبریک! 🎁 ${prize.label}
-        <span class="code">${prize.code}</span></div>`;
-    } else {
-      resultDiv.innerHTML = `<div class="prize-box">😅 این دفعه شانس نبود، دوباره امتحان کن!</div>`;
+    if (docSnap.exists) {
+      showStatus('شما قبلاً در این قرعه‌کشی شرکت کرده‌اید و فقط یک‌بار امکان شرکت وجود دارد.');
+      spinning = false;
+      this.disabled = false;
+      document.getElementById('phoneInput').disabled = false;
+      return;
     }
-  }, 5100);
+
+    showStatus('');
+    // انتخاب تصادفی جایزه
+    const winningIndex = Math.floor(Math.random() * numSegments);
+
+    // آفست تصادفی داخل قسمت (نه دقیقا وسط، نه نزدیک به خط) تا پیکان واضح داخل قسمت بیفته
+    const safeMargin = segmentAngle * 0.30;
+    const randomOffset = (Math.random() * (segmentAngle - 2 * safeMargin)) - (segmentAngle / 2 - safeMargin);
+    const targetAngle = winningIndex * segmentAngle + segmentAngle / 2 + randomOffset;
+
+    const fullSpins = 6 * 2 * Math.PI; // ۶ دور کامل برای جلوه بصری بهتر
+    const pointerAngle = -Math.PI / 2; // پیکان بالای گردونه
+    const finalRotation = fullSpins + (pointerAngle - targetAngle);
+
+    currentRotation += finalRotation;
+    canvas.style.transform = `rotate(${currentRotation}rad)`;
+
+    setTimeout(async () => {
+      const prize = prizes[winningIndex];
+      // ثبت نتیجه در دیتابیس (این ثبت هم مانع شرکت دوباره میشه و هم گزارش برد رو نگه میداره)
+      try {
+        await docRef.set({
+          phone: phone,
+          prize: prize.label,
+          code: prize.code || null,
+          timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        });
+      } catch (err) {
+        console.error('خطا در ثبت نتیجه:', err);
+      }
+
+      spinning = false;
+      showModal(prize);
+    }, 5300);
+
+  } catch (err) {
+    console.error(err);
+    showStatus('خطایی رخ داد، لطفاً دوباره تلاش کنید.');
+    spinning = false;
+    this.disabled = false;
+    document.getElementById('phoneInput').disabled = false;
+  }
 });
 </script>
 
 </body>
 </html>
+
+
+  
