@@ -13,13 +13,10 @@
     min-height: 100vh;
     margin: 0;
     background: linear-gradient(135deg, #1e1b4b, #7c3aed);
-    overflow: hidden;
   }
   .wheel-container {
     text-align: center;
     padding: 30px 20px;
-    position: relative;
-    z-index: 2;
   }
   .wheel-container h2 {
     color: #fff;
@@ -98,9 +95,8 @@
     font-size: 14px;
     min-height: 20px;
   }
-
   #resultBox {
-    margin-top: 16px;
+    margin-top: 14px;
     min-height: 24px;
     font-size: 17px;
     font-weight: bold;
@@ -130,11 +126,10 @@
   <div id="resultBox"></div>
 </div>
 
-<!-- ===== Firebase (برای ثبت یک‌بار مصرف بودن هر کاربر) ===== -->
+<!-- ===== Firebase ===== -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
-// ⚠️ این بخش رو با اطلاعات پروژه فایربیس خودتون جایگزین کنید (مراحلش رو در چت توضیح می‌دم)
 const firebaseConfig = {
   apiKey: "AIzaSyDFE2GEtwGmC62BU0nmpcD6dgeP6eo81Sk",
   authDomain: "wheel-project-339a8.firebaseapp.com",
@@ -181,12 +176,10 @@ function drawWheel() {
     ctx.fillStyle = prizes[i].color;
     ctx.fill();
 
-    // خط جداکننده سفید بین قسمت‌ها (برای شفافیت لبه‌ها)
-    ctx.strokeStyle = "rgba(255,255,255,0.8)";
-    ctx.lineWidth = 2;
+    ctx.strokeStyle = "rgba(255,255,255,0.85)";
+    ctx.lineWidth = 3;
     ctx.stroke();
 
-    // متن
     ctx.save();
     ctx.translate(radius, radius);
     ctx.rotate(startAngle + segmentAngle / 2);
@@ -210,10 +203,26 @@ function validPhone(phone) {
 function announceResult(prize) {
   const box = document.getElementById('resultBox');
   if (prize.code) {
-    box.innerHTML = `تبریک! برنده‌ی ${prize.label} شدید — کد شما: <span class="code">${prize.code}</span>`;
+    box.innerHTML = `🎉 تبریک میگیم! برنده‌ی «${prize.label}» شدید — کد شما: <span class="code">${prize.code}</span>`;
   } else {
     box.textContent = 'این دفعه شانس نبود، موفق باشید!';
   }
+}
+
+async function getClientIP() {
+  try {
+    const res = await fetch('https://api.ipify.org?format=json');
+    const data = await res.json();
+    return data.ip;
+  } catch (err) {
+    console.error('خطا در دریافت IP:', err);
+    return null;
+  }
+}
+
+function resetControls(enable) {
+  document.getElementById('spinBtn').disabled = !enable;
+  document.getElementById('phoneInput').disabled = !enable;
 }
 
 document.getElementById('spinBtn').addEventListener('click', async function() {
@@ -226,33 +235,42 @@ document.getElementById('spinBtn').addEventListener('click', async function() {
   }
 
   spinning = true;
-  this.disabled = true;
-  document.getElementById('phoneInput').disabled = true;
+  resetControls(false);
   showStatus('در حال بررسی...');
 
   try {
-    const docRef = db.collection('spins').doc(phone);
-    const docSnap = await docRef.get();
+    const ip = await getClientIP();
+    const phoneRef = db.collection('spins_phone').doc(phone);
+    const phoneSnap = await phoneRef.get();
 
-    if (docSnap.exists) {
-      showStatus('شما قبلاً در این قرعه‌کشی شرکت کرده‌اید و فقط یک‌بار امکان شرکت وجود دارد.');
+    if (phoneSnap.exists) {
+      showStatus('این شماره موبایل قبلاً در قرعه‌کشی شرکت کرده و فقط یک‌بار امکان شرکت وجود دارد.');
       spinning = false;
-      this.disabled = false;
-      document.getElementById('phoneInput').disabled = false;
+      resetControls(true);
       return;
     }
 
+    if (ip) {
+      const ipRef = db.collection('spins_ip').doc(ip);
+      const ipSnap = await ipRef.get();
+      if (ipSnap.exists) {
+        showStatus('از این دستگاه/اینترنت قبلاً در قرعه‌کشی شرکت شده و فقط یک‌بار امکان شرکت وجود دارد.');
+        spinning = false;
+        resetControls(true);
+        return;
+      }
+    }
+
     showStatus('');
-    // انتخاب تصادفی جایزه
     const winningIndex = Math.floor(Math.random() * numSegments);
 
-    // آفست تصادفی داخل قسمت (نه دقیقا وسط، نه نزدیک به خط) تا پیکان واضح داخل قسمت بیفته
+    // آفست تصادفی داخل قسمت (نه دقیقا وسط، نه نزدیک به خط) تا پیکان همیشه واضح داخل یک قسمت بیفته، نه روی خط
     const safeMargin = segmentAngle * 0.30;
     const randomOffset = (Math.random() * (segmentAngle - 2 * safeMargin)) - (segmentAngle / 2 - safeMargin);
     const targetAngle = winningIndex * segmentAngle + segmentAngle / 2 + randomOffset;
 
-    const fullSpins = 6 * 2 * Math.PI; // ۶ دور کامل برای جلوه بصری بهتر
-    const pointerAngle = -Math.PI / 2; // پیکان بالای گردونه
+    const fullSpins = 6 * 2 * Math.PI;
+    const pointerAngle = -Math.PI / 2;
     const finalRotation = fullSpins + (pointerAngle - targetAngle);
 
     currentRotation += finalRotation;
@@ -260,28 +278,32 @@ document.getElementById('spinBtn').addEventListener('click', async function() {
 
     setTimeout(async () => {
       const prize = prizes[winningIndex];
-      // ثبت نتیجه در دیتابیس (این ثبت هم مانع شرکت دوباره میشه و هم گزارش برد رو نگه میداره)
+      const record = {
+        phone: phone,
+        ip: ip || null,
+        prize: prize.label,
+        code: prize.code || null,
+        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+      };
       try {
-        await docRef.set({
-          phone: phone,
-          prize: prize.label,
-          code: prize.code || null,
-          timestamp: firebase.firestore.FieldValue.serverTimestamp()
-        });
+        await phoneRef.set(record);
+        if (ip) {
+          await db.collection('spins_ip').doc(ip).set(record);
+        }
       } catch (err) {
         console.error('خطا در ثبت نتیجه:', err);
       }
 
       spinning = false;
       announceResult(prize);
+      // دکمه و فیلد شماره را قفل نگه می‌داریم چون کاربر شرکت کرده
     }, 5300);
 
   } catch (err) {
     console.error(err);
     showStatus('خطایی رخ داد، لطفاً دوباره تلاش کنید.');
     spinning = false;
-    this.disabled = false;
-    document.getElementById('phoneInput').disabled = false;
+    resetControls(true);
   }
 });
 </script>
