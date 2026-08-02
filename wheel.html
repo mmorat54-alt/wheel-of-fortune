@@ -126,20 +126,13 @@
   <div id="resultBox"></div>
 </div>
 
-<!-- ===== Firebase ===== -->
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<!-- ===== Supabase ===== -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const firebaseConfig = {
-  apiKey: "AIzaSyDFE2GEtwGmC62BU0nmpcD6dgeP6eo81Sk",
-  authDomain: "wheel-project-339a8.firebaseapp.com",
-  projectId: "wheel-project-339a8",
-  storageBucket: "wheel-project-339a8.firebasestorage.app",
-  messagingSenderId: "628356281697",
-  appId: "1:628356281697:web:f8ad85ec5e032efccc8120"
-};
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
+// ⚠️ این دو مقدار رو با اطلاعات پروژه Supabase خودتون جایگزین کنید
+const SUPABASE_URL = "https://fnpywdgztvmpxypxmsag.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZucHl3ZGd6dHZtcHh5cHhtc2FnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU2Njg2MTQsImV4cCI6MjEwMTI0NDYxNH0.n55YtuKK2whBd_X5zb18Xqg7hAlw-fur2vKYnFYVHA0";
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 </script>
 
 <script>
@@ -240,10 +233,16 @@ document.getElementById('spinBtn').addEventListener('click', async function() {
 
   try {
     const ip = await getClientIP();
-    const phoneRef = db.collection('spins_phone').doc(phone);
-    const phoneSnap = await phoneRef.get();
 
-    if (phoneSnap.exists) {
+    const { data: phoneMatch, error: phoneErr } = await supabase
+      .from('spins')
+      .select('id')
+      .eq('phone', phone)
+      .maybeSingle();
+
+    if (phoneErr) throw phoneErr;
+
+    if (phoneMatch) {
       showStatus('این شماره موبایل قبلاً در قرعه‌کشی شرکت کرده و فقط یک‌بار امکان شرکت وجود دارد.');
       spinning = false;
       resetControls(true);
@@ -251,9 +250,15 @@ document.getElementById('spinBtn').addEventListener('click', async function() {
     }
 
     if (ip) {
-      const ipRef = db.collection('spins_ip').doc(ip);
-      const ipSnap = await ipRef.get();
-      if (ipSnap.exists) {
+      const { data: ipMatch, error: ipErr } = await supabase
+        .from('spins')
+        .select('id')
+        .eq('ip', ip)
+        .maybeSingle();
+
+      if (ipErr) throw ipErr;
+
+      if (ipMatch) {
         showStatus('از این دستگاه/اینترنت قبلاً در قرعه‌کشی شرکت شده و فقط یک‌بار امکان شرکت وجود دارد.');
         spinning = false;
         resetControls(true);
@@ -264,7 +269,7 @@ document.getElementById('spinBtn').addEventListener('click', async function() {
     showStatus('');
     const winningIndex = Math.floor(Math.random() * numSegments);
 
-    // آفست تصادفی داخل قسمت (نه دقیقا وسط، نه نزدیک به خط) تا پیکان همیشه واضح داخل یک قسمت بیفته، نه روی خط
+    // آفست تصادفی داخل قسمت (نه دقیقا وسط، نه نزدیک به خط) تا پیکان همیشه واضح داخل یک قسمت بیفته
     const safeMargin = segmentAngle * 0.30;
     const randomOffset = (Math.random() * (segmentAngle - 2 * safeMargin)) - (segmentAngle / 2 - safeMargin);
     const targetAngle = winningIndex * segmentAngle + segmentAngle / 2 + randomOffset;
@@ -278,25 +283,20 @@ document.getElementById('spinBtn').addEventListener('click', async function() {
 
     setTimeout(async () => {
       const prize = prizes[winningIndex];
-      const record = {
-        phone: phone,
-        ip: ip || null,
-        prize: prize.label,
-        code: prize.code || null,
-        timestamp: firebase.firestore.FieldValue.serverTimestamp()
-      };
       try {
-        await phoneRef.set(record);
-        if (ip) {
-          await db.collection('spins_ip').doc(ip).set(record);
-        }
+        const { error: insertErr } = await supabase.from('spins').insert({
+          phone: phone,
+          ip: ip || null,
+          prize: prize.label,
+          code: prize.code || null
+        });
+        if (insertErr) console.error('خطا در ثبت نتیجه:', insertErr);
       } catch (err) {
         console.error('خطا در ثبت نتیجه:', err);
       }
 
       spinning = false;
       announceResult(prize);
-      // دکمه و فیلد شماره را قفل نگه می‌داریم چون کاربر شرکت کرده
     }, 5300);
 
   } catch (err) {
