@@ -132,7 +132,7 @@
 // ⚠️ این دو مقدار رو با اطلاعات پروژه Supabase خودتون جایگزین کنید
 const SUPABASE_URL = "https://fnpywdgztvmpxypxmsag.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZucHl3ZGd6dHZtcHh5cHhtc2FnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU2Njg2MTQsImV4cCI6MjEwMTI0NDYxNH0.n55YtuKK2whBd_X5zb18Xqg7hAlw-fur2vKYnFYVHA0";
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 </script>
 
 <script>
@@ -234,7 +234,7 @@ document.getElementById('spinBtn').addEventListener('click', async function() {
   try {
     const ip = await getClientIP();
 
-    const { data: phoneMatch, error: phoneErr } = await supabase
+    const { data: phoneMatch, error: phoneErr } = await sbClient
       .from('spins')
       .select('id')
       .eq('phone', phone)
@@ -250,7 +250,7 @@ document.getElementById('spinBtn').addEventListener('click', async function() {
     }
 
     if (ip) {
-      const { data: ipMatch, error: ipErr } = await supabase
+      const { data: ipMatch, error: ipErr } = await sbClient
         .from('spins')
         .select('id')
         .eq('ip', ip)
@@ -284,7 +284,7 @@ document.getElementById('spinBtn').addEventListener('click', async function() {
     setTimeout(async () => {
       const prize = prizes[winningIndex];
       try {
-        const { error: insertErr } = await supabase.from('spins').insert({
+        const { error: insertErr } = await sbClient.from('spins').insert({
           phone: phone,
           ip: ip || null,
           prize: prize.label,
